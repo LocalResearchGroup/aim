@@ -1,12 +1,3 @@
-.DS_Store/
-.specstory/
-.sesskey
-aim_remote/.aim/
-aim_remote/upload/
-aim_remote/example/.aim/
-aim_remote/example/aim_repo.zip
-**/.env
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
