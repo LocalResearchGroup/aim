@@ -845,7 +845,9 @@ class Run(BasicRun):
          system_tracking_interval (:obj:`int`, optional): Sets the tracking interval in seconds for system usage
             metrics (CPU, Memory, etc.). Set to `None` to disable system metrics tracking.
          log_system_params (:obj:`bool`, optional): Enable/Disable logging of system params such as installed packages,
-            git info, environment variables, etc.
+            git info, etc.
+         log_env_variables (:obj:`bool`, optional): Enable/Disable logging of environment variables. Requires
+            `log_system_params` to be set to True.
     """
 
     @noexcept
@@ -860,19 +862,24 @@ class Run(BasicRun):
         system_tracking_interval: Optional[Union[int, float]] = DEFAULT_SYSTEM_TRACKING_INT,
         log_system_params: Optional[bool] = False,
         capture_terminal_logs: Optional[bool] = True,
+        log_env_variables: Optional[bool] = False,
     ):
         super().__init__(run_hash, repo=repo, read_only=read_only, experiment=experiment, force_resume=force_resume)
 
         self._system_resource_tracker: ResourceTracker = None
         if not read_only:
+            if log_env_variables and not log_system_params:
+                raise ValueError(f'{log_env_variables=}, but {log_system_params=}. '
+                                 f'Set `log_system_params` to True to log environment variables.')
             if log_system_params:
                 self['__system_params'] = {
                     'packages': get_installed_packages(),
-                    'env_variables': get_environment_variables(),
                     'git_info': get_git_info(),
                     'executable': sys.executable,
                     'arguments': sys.argv,
                 }
+                if log_env_variables:
+                    self['__system_params']['env_variables'] = get_environment_variables()
 
             if ResourceTracker.check_interval(system_tracking_interval) or capture_terminal_logs:
                 current_logs = self.get_terminal_logs()
