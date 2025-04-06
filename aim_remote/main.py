@@ -90,6 +90,10 @@ async def post(file: UploadFile):
             f.write(f"{timestamp} {upload_id} {filename} {len(content)} ERROR\n{e}\n")
         return JSONResponse({"status": "error", "timestamp": str(timestamp), "upload_id": upload_id})
 
+@rt('/reprocess_upload')
+def post(upload_id: str):
+    uploads.put(upload_id)
+    return Div(f'Upload {upload_id} reprocessing...')
 
 @rt('/shutdown')
 def get():
