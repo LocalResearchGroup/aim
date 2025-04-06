@@ -43,7 +43,14 @@ def process_uploads():
                 f.write(f"{ts()} {upload_id} run_id: {run_id}\n")
             aim_cp_cmd = f"aim runs --repo {upload_dir/'.aim'} cp --destination {AIM_REPO} {run_id}"
             print('aim_cp_cmd', aim_cp_cmd)
-            subprocess.check_call(aim_cp_cmd.split())
+            try:
+                output = subprocess.check_output(aim_cp_cmd.split(), stderr=subprocess.STDOUT).decode().strip()
+                with (UPLOAD_DIR/'processor.log').open('a') as f:
+                    f.write(f"{ts()} {upload_id} CP_OUTPUT: {output if output else 'No output'}\n")
+            except subprocess.CalledProcessError as e:
+                with (UPLOAD_DIR/'processor.log').open('a') as f:
+                    f.write(f"{ts()} {upload_id} CP_ERROR: {e.output.decode().strip()}\n")
+                raise
             with (UPLOAD_DIR/'processor.log').open('a') as f:
                 f.write(f"{ts()} {upload_id} SUCCESS\n")
         except queue.Empty:
@@ -97,15 +104,41 @@ def get():
 def get():
     return Div(*[(P(line) for line in (UPLOAD_DIR/'processor.log').read_text().split('\n'))], style='border: 1px solid blue;')
 
+@rt('get_run_ids')
+def get():
+    uploaded_run_ids, compared_run_ids = dict(), dict()
+    uploads = [p.name for p in UPLOAD_DIR.iterdir() if len(p.name) == 36 and len(p.name.split('-')) == 5 and p.is_dir()]
+    for upload_id in uploads:
+        uploaded_run_ids[upload_id] = subprocess.check_output(f"aim runs --repo {UPLOAD_DIR/upload_id/'.aim'} ls".split()).decode().strip().split('Total')[0].split()
+    merged_run_ids = subprocess.check_output(f"aim runs --repo {AIM_REPO} ls".split()).decode().strip().split('Total')[0].split()
+    for upload_id, run_ids in uploaded_run_ids.items():
+        for run_id in run_ids:
+            if run_id not in compared_run_ids: compared_run_ids[run_id] = {'upload_ids':set(), 'in_upload': False, 'in_processed': False}
+            compared_run_ids[run_id]['upload_ids'].add(upload_id)
+            compared_run_ids[run_id]['upload_ids']['in_upload'] = True
+    
+    for run_id in merged_run_ids:
+        if run_id not in compared_run_ids: compared_run_ids[run_id] = {'upload_ids':set(), 'in_upload': False, 'in_processed': False}
+        compared_run_ids[run_id]['upload_ids']['in_processed'] = True
+    return Table(Tr(Th('Run ID'), Th('Upload IDs'), Th('In Upload'), Th('In Processed')),
+        *[Tr(Td(run_id), Td(' '.join(v['upload_ids'])), Td('✅' if v['in_upload'] else '❌'), Td('✅' if v['in_processed'] else '❌')) for run_id, v in compared_run_ids.items()],id='run_status_table')
+
+def upload_form():
+    return Form(Input(type="file", name="file", accept=".zip"), Button("Upload", type="submit"),
+        Div(id="upload-form-result"), hx_post="/upload", hx_target="#upload-form-result", id="upload-form")
+
 @rt('/')
 def get():
     global running, processor_thread, uploads 
     return Titled('AIM Uploader Status',Div(
         Div(
+            Article(H4('Manual Upload'), upload_form()),
             Button('Shutdown', hx_get='/shutdown', hx_confirm='Are you really sure you want to shutdown the processor? The server must be restarted to start it again.'),
-            Button('Upload Log', hx_get='/upload_log', hx_target='#upload_log_content'),
+            Button('View Run Status', hx_get='/get_run_ids', hx_target='#run_status_table_div', hx_swap='innerHTML'),
+            Div(id='run_status_table_div'),
+            Button('View Upload Log', hx_get='/upload_log', hx_target='#upload_log_content'),
             Div(id='upload_log_content'),
-            Button('Processor Log', hx_get='/processor_log', hx_target='#processor_log_content'),
+            Button('View Processor Log', hx_get='/processor_log', hx_target='#processor_log_content'),
             Div(id='processor_log_content'),
             style='display: flex; flex-direction: column; gap: 8px;'
         ),
