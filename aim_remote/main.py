@@ -117,12 +117,13 @@ def get():
         if upload_id not in uploaded_run_ids:
             try:
                 with open(UPLOAD_DIR/upload_id/'run_ids.json', 'r') as f:
-                    run_ids = json.load(f)
+                    uploaded_run_ids[upload_id] = json.load(f)
+                print(f'{idx}/{len(uploads)} loaded {upload_id}')
             except FileNotFoundError:
                 uploaded_run_ids[upload_id] = subprocess.check_output(f"aim runs --repo {UPLOAD_DIR/upload_id/'.aim'} ls".split()).decode().strip().split('Total')[0].split()
                 with open(UPLOAD_DIR/upload_id/'run_ids.json', 'w') as f:
                     json.dump(uploaded_run_ids[upload_id], f)
-            print(f'{idx}/{len(uploads)} processed {upload_id}')
+                print(f'{idx}/{len(uploads)} processed {upload_id}')
         else:
             print(f'{idx}/{len(uploads)} skipped {upload_id}')
     print('finished processing uploads')
