@@ -143,7 +143,7 @@ def get():
         if run_id not in compared_run_ids: compared_run_ids[run_id] = {'upload_ids':set(), 'in_upload': False, 'in_processed': False}
         compared_run_ids[run_id]['in_processed'] = True
     return Table(Tr(Th('Run ID'), Th('Upload IDs'), Th('In Upload'), Th('In Processed')),
-        *[Tr(Td(run_id), Td(' '.join(v['upload_ids'])), Td('✅' if v['in_upload'] else '❌'), Td('✅' if v['in_processed'] else '❌')) for run_id, v in compared_run_ids.items()],id='run_status_table')
+        *[Tr(Td(run_id), Td(*[A(u, hx_post=f'/reprocess_upload?upload_id={u}') if not v['in_processed'] else Div(u) for u in v['upload_ids']]), Td('✅' if v['in_upload'] else '❌'), Td('✅' if v['in_processed'] else '❌')) for run_id, v in compared_run_ids.items()],id='run_status_table')
 
 def upload_form():
     return Form(Input(type="file", name="file", accept=".zip"), Button("Upload", type="submit"),
