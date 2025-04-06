@@ -104,7 +104,7 @@ def get():
 def get():
     return Div(*[(P(line) for line in (UPLOAD_DIR/'processor.log').read_text().split('\n'))], style='border: 1px solid blue;')
 
-@rt('get_run_ids')
+@rt('/get_run_ids')
 def get():
     uploaded_run_ids, compared_run_ids = dict(), dict()
     uploads = [p.name for p in UPLOAD_DIR.iterdir() if len(p.name) == 36 and len(p.name.split('-')) == 5 and p.is_dir()]
