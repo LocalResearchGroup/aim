@@ -21,6 +21,8 @@ app, rt = fast_app(key_fname=os.environ['SESSKEY_FNAME'])
 uploads = queue.Queue()
 running = True
 processor_thread = None
+uploaded_run_ids = dict()
+
 def ts(): return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 @threaded
@@ -106,11 +108,19 @@ def get():
 
 @rt('/get_run_ids')
 def get():
-    uploaded_run_ids, compared_run_ids = dict(), dict()
+    global uploaded_run_ids
+    print('get_run_ids')
+    compared_run_ids = dict()
     uploads = [p.name for p in UPLOAD_DIR.iterdir() if len(p.name) == 36 and len(p.name.split('-')) == 5 and p.is_dir()]
-    for upload_id in uploads:
-        uploaded_run_ids[upload_id] = subprocess.check_output(f"aim runs --repo {UPLOAD_DIR/upload_id/'.aim'} ls".split()).decode().strip().split('Total')[0].split()
+    for idx, upload_id in enumerate(uploads):
+        if upload_id not in uploaded_run_ids:
+            uploaded_run_ids[upload_id] = subprocess.check_output(f"aim runs --repo {UPLOAD_DIR/upload_id/'.aim'} ls".split()).decode().strip().split('Total')[0].split()
+            print(f'{idx}/{len(uploads)} processed {upload_id}')
+        else:
+            print(f'{idx}/{len(uploads)} skipped {upload_id}')
+    print('finished processing uploads')
     merged_run_ids = subprocess.check_output(f"aim runs --repo {AIM_REPO} ls".split()).decode().strip().split('Total')[0].split()
+    print('finished processing merged_run_ids')
     for upload_id, run_ids in uploaded_run_ids.items():
         for run_id in run_ids:
             if run_id not in compared_run_ids: compared_run_ids[run_id] = {'upload_ids':set(), 'in_upload': False, 'in_processed': False}
