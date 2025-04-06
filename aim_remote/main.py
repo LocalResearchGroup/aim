@@ -5,6 +5,7 @@ from pathlib import Path
 import uuid, subprocess, shutil
 from datetime import datetime
 import os
+import json
 
 # Setup paths
 UPLOAD_DIR = Path(os.getenv('UPLOAD_DIR', './upload'))
@@ -114,7 +115,13 @@ def get():
     uploads = [p.name for p in UPLOAD_DIR.iterdir() if len(p.name) == 36 and len(p.name.split('-')) == 5 and p.is_dir()]
     for idx, upload_id in enumerate(uploads):
         if upload_id not in uploaded_run_ids:
-            uploaded_run_ids[upload_id] = subprocess.check_output(f"aim runs --repo {UPLOAD_DIR/upload_id/'.aim'} ls".split()).decode().strip().split('Total')[0].split()
+            try:
+                with open(UPLOAD_DIR/upload_id/'run_ids.json', 'r') as f:
+                    run_ids = json.load(f)
+            except FileNotFoundError:
+                uploaded_run_ids[upload_id] = subprocess.check_output(f"aim runs --repo {UPLOAD_DIR/upload_id/'.aim'} ls".split()).decode().strip().split('Total')[0].split()
+                with open(UPLOAD_DIR/upload_id/'run_ids.json', 'w') as f:
+                    json.dump(uploaded_run_ids[upload_id], f)
             print(f'{idx}/{len(uploads)} processed {upload_id}')
         else:
             print(f'{idx}/{len(uploads)} skipped {upload_id}')
