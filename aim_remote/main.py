@@ -133,11 +133,11 @@ def get():
         for run_id in run_ids:
             if run_id not in compared_run_ids: compared_run_ids[run_id] = {'upload_ids':set(), 'in_upload': False, 'in_processed': False}
             compared_run_ids[run_id]['upload_ids'].add(upload_id)
-            compared_run_ids[run_id]['upload_ids']['in_upload'] = True
+            compared_run_ids[run_id]['in_upload'] = True
     
     for run_id in merged_run_ids:
         if run_id not in compared_run_ids: compared_run_ids[run_id] = {'upload_ids':set(), 'in_upload': False, 'in_processed': False}
-        compared_run_ids[run_id]['upload_ids']['in_processed'] = True
+        compared_run_ids[run_id]['in_processed'] = True
     return Table(Tr(Th('Run ID'), Th('Upload IDs'), Th('In Upload'), Th('In Processed')),
         *[Tr(Td(run_id), Td(' '.join(v['upload_ids'])), Td('✅' if v['in_upload'] else '❌'), Td('✅' if v['in_processed'] else '❌')) for run_id, v in compared_run_ids.items()],id='run_status_table')
 
